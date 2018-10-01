@@ -1,7 +1,7 @@
 import { Listable } from "../../common/Listable";
+import { Spell } from "../../common/Spell";
+import { StatBlock } from "../../common/StatBlock";
 import { DnDAppFilesImporter } from "../Importers/DnDAppFilesImporter";
-import { Spell } from "../Spell/Spell";
-import { StatBlock } from "../StatBlock/StatBlock";
 
 export class Store {
     private static _prefix = "ImprovedInitiative";
@@ -100,13 +100,13 @@ export class Store {
     public static ImportFromDnDAppFile(file: File) {
         const statBlocksCallback = (statBlocks: StatBlock[]) => {
             statBlocks.forEach(c => {
-                this.Save(Store.StatBlocks, c.Name, c);
+                this.Save(Store.StatBlocks, c.Id, c);
             });
         };
 
         const spellsCallback = (spells: Spell[]) => {
             spells.forEach(c => {
-                this.Save(Store.Spells, c.Name, c);
+                this.Save(Store.Spells, c.Id, c);
             });
         };
 

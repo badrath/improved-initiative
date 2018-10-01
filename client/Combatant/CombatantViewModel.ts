@@ -1,9 +1,13 @@
+import * as ko from "knockout";
+import * as _ from "lodash";
+
 import { toModifierString } from "../../common/Toolbox";
 import { CombatantCommander } from "../Commands/CombatantCommander";
 import { ConcentrationPrompt } from "../Commands/Prompts/ConcentrationPrompt";
 import { DefaultPrompt, Prompt } from "../Commands/Prompts/Prompt";
-import { TagPrompt } from "../Commands/Prompts/TagPrompt";
+import { TagPromptWrapper } from "../Commands/Prompts/TagPrompt";
 import { Encounter } from "../Encounter/Encounter";
+import { Conditions } from "../Rules/Conditions";
 import { CurrentSettings } from "../Settings/Settings";
 import { Metrics } from "../Utility/Metrics";
 import { Combatant } from "./Combatant";
@@ -22,9 +26,9 @@ export class CombatantViewModel {
     ) {
         this.HP = ko.pureComputed(() => {
             if (this.Combatant.TemporaryHP()) {
-                return `${this.Combatant.CurrentHP()}+${this.Combatant.TemporaryHP()}/${this.Combatant.MaxHP}`;
+                return `${this.Combatant.CurrentHP()}+${this.Combatant.TemporaryHP()}/${this.Combatant.MaxHP()}`;
             } else {
-                return `${this.Combatant.CurrentHP()}/${this.Combatant.MaxHP}`;
+                return `${this.Combatant.CurrentHP()}/${this.Combatant.MaxHP()}`;
             }
         });
         this.Name = Combatant.DisplayName;
@@ -70,13 +74,14 @@ export class CombatantViewModel {
 
     public InitiativeClass = ko.computed(() => {
         if (this.Combatant.InitiativeGroup()) {
-            return "fa fa-link";
+            return "fas fa-link";
         }
     });
 
     public GetHPColor() {
-        let green = Math.floor((this.Combatant.CurrentHP() / this.Combatant.MaxHP) * 170);
-        let red = Math.floor((this.Combatant.MaxHP - this.Combatant.CurrentHP()) / this.Combatant.MaxHP * 170);
+        const maxHP = this.Combatant.MaxHP(), currentHP = this.Combatant.CurrentHP();
+        let green = Math.floor((currentHP / maxHP) * 170);
+        let red = Math.floor((maxHP - currentHP) / maxHP * 170);
         return "rgb(" + red + "," + green + ",0)";
     }
 
@@ -111,7 +116,7 @@ export class CombatantViewModel {
         this.PromptUser(prompt);
     }
 
-    public EditName() {
+    public SetAlias() {
         let currentName = this.Name();
         const prompt = new DefaultPrompt(`Change alias for ${currentName}: <input id='alias' class='response' />`,
             response => {
@@ -152,14 +157,22 @@ export class CombatantViewModel {
         this.Combatant.Encounter.QueueEmitEncounter();
     }
 
-    public AddTag(encounter: Encounter) {
-        const prompt = new TagPrompt(encounter, this.Combatant, this.LogEvent);
-        this.PromptUser(prompt);
-    }
-
     public RemoveTag = (tag: Tag) => {
         this.Combatant.Tags.splice(this.Combatant.Tags.indexOf(tag), 1);
-        this.LogEvent(`${this.Name()} removed note: "${tag.Text}"`);
+        this.LogEvent(`${this.Name()} removed tag: "${tag.Text}"`);
         this.Combatant.Encounter.QueueEmitEncounter();
+    }
+
+    public ReferenceTaggedCondition = (tag: Tag) => {
+        const casedConditionName = _.startCase(tag.Text);
+        if (Conditions[casedConditionName]) {
+            const prompt = new DefaultPrompt(`<div class="p-condition-reference"><h3>${casedConditionName}</h3>${Conditions[casedConditionName]}</div>`);
+            this.PromptUser(prompt);
+        }
+    }
+
+    public TagHasReference = (tag: Tag) => {
+        const casedConditionName = _.startCase(tag.Text);
+        return Conditions[casedConditionName] !== undefined;
     }
 }

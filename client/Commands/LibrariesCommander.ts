@@ -1,13 +1,13 @@
-import _ = require("lodash");
+import * as _ from "lodash";
+import { SavedCombatant, SavedEncounter } from "../../common/SavedEncounter";
+import { Spell } from "../../common/Spell";
+import { StatBlock } from "../../common/StatBlock";
 import { probablyUniqueString } from "../../common/Toolbox";
-import { AccountClient } from "../Account/AccountClient";
-import { SavedCombatant, SavedEncounter } from "../Encounter/SavedEncounter";
 import { Libraries } from "../Library/Libraries";
 import { Listing } from "../Library/Listing";
 import { NPCLibrary } from "../Library/NPCLibrary";
 import { PCLibrary } from "../Library/PCLibrary";
-import { Spell } from "../Spell/Spell";
-import { StatBlock } from "../StatBlock/StatBlock";
+import { Conditions } from "../Rules/Conditions";
 import { TrackerViewModel } from "../TrackerViewModel";
 import { Metrics } from "../Utility/Metrics";
 import { Store } from "../Utility/Store";
@@ -17,19 +17,18 @@ import { DefaultPrompt } from "./Prompts/Prompt";
 import { SpellPromptWrapper } from "./Prompts/SpellPrompt";
 
 export class LibrariesCommander {
-    private accountClient: AccountClient;
     constructor(
         private tracker: TrackerViewModel,
         private libraries: Libraries,
         private encounterCommander: EncounterCommander) {
-        this.accountClient = new AccountClient();
     }
 
     public ShowLibraries = () => this.tracker.LibrariesVisible(true);
     public HideLibraries = () => this.tracker.LibrariesVisible(false);
 
     public AddStatBlockFromListing = (listing: Listing<StatBlock>, hideOnAdd: boolean) => {
-        listing.GetAsyncWithUpdatedId(statBlock => {
+        listing.GetAsyncWithUpdatedId(unsafeStatBlock => {
+            const statBlock = { ...StatBlock.Default(), ...unsafeStatBlock };
             this.tracker.Encounter.AddCombatantFromStatBlock(statBlock, hideOnAdd);
             Metrics.TrackEvent("CombatantAdded", { Name: statBlock.Name });
             this.tracker.EventLog.AddEvent(`${statBlock.Name} added to combat.`);
@@ -58,7 +57,9 @@ export class LibrariesCommander {
             statBlock.Name = "New Creature";
         }
 
-        this.tracker.StatBlockEditor.EditStatBlock(newId, statBlock, library.SaveNewStatBlock, () => { }, "global");
+        statBlock.Id = newId;
+
+        this.tracker.EditStatBlock("library", statBlock, library.SaveNewStatBlock, library.StatBlocks());
     }
 
     public EditStatBlock = (
@@ -66,10 +67,26 @@ export class LibrariesCommander {
         library: PCLibrary | NPCLibrary) => {
         listing.GetAsyncWithUpdatedId(statBlock => {
             if (listing.Origin === "server") {
-                const statBlockWithNewId = { ...statBlock, Id: probablyUniqueString() };
-                this.tracker.StatBlockEditor.EditStatBlock(statBlockWithNewId.Id, statBlockWithNewId, library.SaveNewStatBlock, () => { }, "global");
+                const statBlockWithNewId = {
+                    ...StatBlock.Default(),
+                    ...statBlock,
+                    Id: probablyUniqueString()
+                };
+                this.tracker.EditStatBlock(
+                    "library",
+                    statBlockWithNewId,
+                    library.SaveNewStatBlock,
+                    library.StatBlocks()
+                );
             } else {
-                this.tracker.StatBlockEditor.EditStatBlock(listing.Id, statBlock, s => library.SaveEditedStatBlock(listing, s), this.deleteSavedStatBlock(library.StoreName, listing.Id), "global");
+                this.tracker.EditStatBlock(
+                    "library",
+                    { ...StatBlock.Default(), ...statBlock },
+                    s => library.SaveEditedStatBlock(listing, s),
+                    library.StatBlocks(),
+                    this.deleteSavedStatBlock(library.StoreName, listing.Id),
+                    library.SaveNewStatBlock
+                );
             }
         });
     }
@@ -86,7 +103,7 @@ export class LibrariesCommander {
     public EditSpell = (listing: Listing<Spell>) => {
         listing.GetAsyncWithUpdatedId(spell => {
             this.tracker.SpellEditor.EditSpell(
-                spell,
+                { ...Spell.Default(), ...spell },
                 this.libraries.Spells.AddOrUpdateSpell,
                 this.libraries.Spells.DeleteSpellById
             );
@@ -125,5 +142,13 @@ export class LibrariesCommander {
             .value();
         const prompt = new MoveEncounterPromptWrapper(legacySavedEncounter, this.libraries.Encounters.Move, folderNames);
         this.tracker.PromptQueue.Add(prompt);
+    }
+
+    public ReferenceCondition = (conditionName: string) => {
+        const casedConditionName = _.startCase(conditionName);
+        if (Conditions[casedConditionName]) {
+            const prompt = new DefaultPrompt(`<div class="p-condition-reference"><h3>${casedConditionName}</h3>${Conditions[casedConditionName]}</div>`);
+            this.tracker.PromptQueue.Add(prompt);
+        }
     }
 }

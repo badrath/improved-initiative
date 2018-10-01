@@ -1,4 +1,7 @@
-import { PlayerViewSettings } from "../../common/PlayerViewSettings";
+import * as ko from "knockout";
+import * as _ from "lodash";
+
+import { HpVerbosityOption, PlayerViewSettings } from "../../common/PlayerViewSettings";
 import { Command } from "../Commands/Command";
 import { CommandSetting } from "../Commands/CommandSetting";
 import { Store } from "../Utility/Store";
@@ -24,24 +27,15 @@ export interface Settings {
     Version: string;
 }
 
-
-export const hpVerbosityOptions = [
-    "Actual HP",
-    "Colored Label",
-    "Monochrome Label",
-    "Damage Taken",
-    "Hide All"
-];
-
 function getLegacySetting<T>(settingName: string, def: T): T {
     const setting = Store.Load<T>(Store.User, settingName);
-    if (setting === undefined) {
+    if (setting === null) {
         return def;
     }
     return setting;
 }
 
-function getDefaultSettings(): Settings {
+export function getDefaultSettings(): Settings {
     return {
         Commands: [],
         Rules: {
@@ -56,8 +50,10 @@ function getDefaultSettings(): Settings {
             DisplayDifficulty: false
         },
         PlayerView: {
+            ActiveCombatantOnTop: false,
             AllowPlayerSuggestions: false,
             MonsterHPVerbosity: "Colored Label",
+            PlayerHPVerbosity: "Actual HP",
             HideMonstersOutsideEncounter: false,
             DisplayRoundCounter: false,
             DisplayTurnTimer: false,
@@ -75,7 +71,7 @@ function getDefaultSettings(): Settings {
                 backgroundUrl: "",
             }
         },
-        Version: process.env.VERSION
+        Version: process.env.VERSION || "0.0.0"
     };
 }
 
@@ -93,12 +89,14 @@ function getLegacySettings(): Settings {
     return {
         Commands: commands,
         Rules: {
+            ...defaultSettings.Rules,
             RollMonsterHp: getLegacySetting<boolean>("RollMonsterHP", false),
             AllowNegativeHP: getLegacySetting<boolean>("AllowNegativeHP", false),
             AutoCheckConcentration: getLegacySetting<boolean>("AutoCheckConcentration", true),
             AutoGroupInitiative: getLegacySetting<AutoGroupInitiativeOption>("AutoGroupInitiative", "None")
         },
         TrackerView: {
+            ...defaultSettings.TrackerView,
             DisplayRoundCounter: getLegacySetting<boolean>("DisplayRoundCounter", false),
             DisplayTurnTimer: getLegacySetting<boolean>("DisplayTurnTimer", false),
             DisplayDifficulty: getLegacySetting<boolean>("DisplayDifficulty", false)
@@ -106,7 +104,8 @@ function getLegacySettings(): Settings {
         PlayerView: {
             ...defaultSettings.PlayerView,
             AllowPlayerSuggestions: getLegacySetting<boolean>("PlayerViewAllowPlayerSuggestions", false),
-            MonsterHPVerbosity: getLegacySetting<string>("MonsterHPVerbosity", "Colored Label"),
+            ActiveCombatantOnTop: getLegacySetting<boolean>("ActiveCombatantOnTop", false),
+            MonsterHPVerbosity: getLegacySetting<HpVerbosityOption>("MonsterHPVerbosity", "Colored Label"),
             HideMonstersOutsideEncounter: getLegacySetting<boolean>("HideMonstersOutsideEncounter", false),
             DisplayRoundCounter: getLegacySetting<boolean>("PlayerViewDisplayRoundCounter", false),
             DisplayTurnTimer: getLegacySetting<boolean>("PlayerViewDisplayTurnTimer", false),
@@ -127,15 +126,13 @@ function configureCommands(newSettings: Settings, commands: Command[]) {
         }
     });
 
-    newSettings.Commands.forEach(b => {
-        const matchedCommands = commands.filter(c => c.Description == b.Name);
-        if (matchedCommands.length !== 1) {
-            console.warn(`Couldn't bind command: ${b.Name}`);
-            return;
+    commands.forEach(command => {
+        const commandSetting = _.find(newSettings.Commands, c => c.Name == command.Id);
+        if (commandSetting) {
+            command.KeyBinding = commandSetting.KeyBinding;
+            command.ShowOnActionBar(commandSetting.ShowOnActionBar);
         }
-        Mousetrap.bind(b.KeyBinding, matchedCommands[0].ActionBinding);
-        matchedCommands[0].KeyBinding = b.KeyBinding;
-        matchedCommands[0].ShowOnActionBar(b.ShowOnActionBar);
+        Mousetrap.bind(command.KeyBinding, command.ActionBinding);
     });
 }
 

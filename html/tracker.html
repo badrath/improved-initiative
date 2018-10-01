@@ -50,6 +50,7 @@
             params: { 
                 settingsVisible: SettingsVisible,
                 repeatTutorial: RepeatTutorial,
+                reviewPrivacyPolicy: ReviewPrivacyPolicy,
                 encounterCommands: EncounterToolbar, 
                 combatantCommander: CombatantCommander,
                 libraries: Libraries
@@ -89,14 +90,9 @@
     </div>
     <div class="center-column">
         <!-- ko if: CenterColumn() === "statblockeditor" -->
-        <div class="statblock-editor" data-bind="
-    component: {
-        name: 'statblockeditor',
-        params: {
-            editor: StatBlockEditor
-        }
-    }">
-        </div>
+        <div class="statblock-editor" data-bind="react: {
+                component: StatBlockEditor
+        }"></div>
         <!-- /ko -->
         <!-- ko if: CenterColumn() === "spelleditor" -->
         <div class="spell-editor" data-bind="
@@ -111,12 +107,12 @@
         <!-- ko if: CenterColumn() === "combat" -->
         <h2>Initiative Order</h2>
         <ul class="combatants">
-            <li class="combatant header">
-                <span class="initiative fa" data-bind="css: Encounter.StateIcon, attr: { title: Encounter.StateTip }"></span>
-                <span class="name">Combatant</span>
-                <span class="hp fa fa-heart"></span>
-                <span class="ac fa fa-shield"></span>
-                <span title="Add notes to a creature to keep track of conditions or other effects." class="tags">Notes</span>
+            <li class="combatant--header">
+                <span class="combatant__initiative fa" data-bind="css: Encounter.StateIcon, attr: { title: Encounter.StateTip }"></span>
+                <span class="combatant__name">Combatant</span>
+                <span class="combatant__hp fas fa-heart"></span>
+                <span class="combatant__ac fas fa-shield-alt"></span>
+                <span title="Add tags to a creature to keep track of conditions or other effects." class="combatant__tags">Tags</span>
             </li>
             <!-- ko foreach: OrderedCombatants -->
             <li class="combatant" data-bind="
@@ -179,14 +175,14 @@
         <div class="selected-combatant">
             <!-- ko if: CombatantCommander.HasOneSelected -->
             <h2>Selected Combatant</h2>
-            <div class="close button fa fa-close" data-bind="click: CombatantCommander.Deselect"></div>
+            <div class="button button--close" data-bind="click: CombatantCommander.Deselect"><span class="fas fa-times"></span></div>
             <div style="flex-shrink: 1" data-bind="react: {
                 component: CombatantCommander.StatBlock
             }"></div>
             <!-- /ko -->
             <!-- ko if: CombatantCommander.HasMultipleSelected -->
             <h2>Selected Combatants</h2>
-            <div class="close button fa fa-close" data-bind="click: CombatantCommander.Deselect"></div>
+            <div class="close button fas fa-times" data-bind="click: CombatantCommander.Deselect"></div>
             <div class="selected-combatant-names" data-bind="visible: CombatantCommander.HasMultipleSelected, text: CombatantCommander.Names"></div>
             <!-- /ko -->
         </div>

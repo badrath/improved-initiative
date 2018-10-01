@@ -1,3 +1,5 @@
+import * as ko from "knockout";
+
 import { Listable, ServerListing } from "../../common/Listable";
 import { Store } from "../Utility/Store";
 
@@ -22,7 +24,7 @@ export class Listing<T extends Listable> implements ServerListing {
 
     public SetValue = value => this.value(value);
 
-    public GetAsyncWithUpdatedId(callback: (item: T) => any) {
+    public GetAsyncWithUpdatedId(callback: (item: {}) => any) {
         if (this.value()) {
             return callback(this.value());
         }

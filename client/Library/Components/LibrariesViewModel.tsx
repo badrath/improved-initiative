@@ -4,7 +4,7 @@ import { LibrariesCommander } from "../../Commands/LibrariesCommander";
 import { Button } from "../../Components/Button";
 import { Tabs } from "../../Components/Tabs";
 import { env } from "../../Environment";
-import { StatBlockTextEnricher } from "../../StatBlock/StatBlockTextEnricher";
+import { TextEnricher } from "../../TextEnricher/TextEnricher";
 import { TutorialSpy } from "../../Tutorial/TutorialViewModel";
 import { Libraries as LibrarySet } from "../Libraries";
 import { EncounterLibraryViewModel } from "./EncounterLibraryViewModel";
@@ -14,7 +14,7 @@ import { StatBlockLibraryViewModel } from "./StatBlockLibraryViewModel";
 
 export interface LibrariesProps {
     librariesCommander: LibrariesCommander;
-    statBlockTextEnricher: StatBlockTextEnricher;
+    statBlockTextEnricher: TextEnricher;
     libraries: LibrarySet;
 }
 
@@ -63,8 +63,8 @@ export class LibrariesViewModel extends React.Component<LibrariesProps, Librarie
         const hasAccountSync = env.HasStorage;
 
         return <React.Fragment>
-            <h2>{hasAccountSync && <span className="fa fa-cloud" title="Account Sync is enabled" />} Library</h2>
-            <Button faClass="close" onClick={this.hideLibraries} />
+            <h2>{hasAccountSync && <span className="fas fa-cloud" title="Account Sync is enabled" />} Library</h2>
+            <Button additionalClassNames="button--close" fontAwesomeIcon="times" onClick={this.hideLibraries} />
             <Tabs options={Object.keys(libraries)} onChoose={this.selectLibrary} selected={this.state.selectedLibrary} />
             {selectedLibrary}
         </React.Fragment>;

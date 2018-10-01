@@ -1,6 +1,8 @@
+import * as ko from "knockout";
+
 import { ServerListing } from "../../common/Listable";
+import { StatBlock } from "../../common/StatBlock";
 import { AccountClient } from "../Account/AccountClient";
-import { StatBlock } from "../StatBlock/StatBlock";
 import { Store } from "../Utility/Store";
 import { Listing, ListingOrigin } from "./Listing";
 
@@ -8,7 +10,7 @@ export class NPCLibrary {
     public StatBlocks = ko.observableArray<Listing<StatBlock>>([]);
     public readonly StoreName = Store.StatBlocks;
     
-    constructor() {
+    constructor(private accountClient: AccountClient) {
         $.ajax("../statblocks/").done(s => this.AddListings(s, "server"));
 
         const localStatBlocks = Store.List(this.StoreName);
@@ -28,7 +30,7 @@ export class NPCLibrary {
     public DeleteListing = (id: string) => {
         this.StatBlocks.remove(s => s.Id == id);
         Store.Delete(this.StoreName, id);
-        new AccountClient().DeleteStatBlock(id);
+        this.accountClient.DeleteStatBlock(id);
     }
 
     private saveStatBlock = (listing: Listing<StatBlock>, newStatBlock: StatBlock) => {
@@ -39,7 +41,7 @@ export class NPCLibrary {
         Store.Save<StatBlock>(this.StoreName, newStatBlock.Id, newStatBlock);
         listing.SetValue(newStatBlock);
 
-        new AccountClient().SaveStatBlock(newStatBlock)
+        this.accountClient.SaveStatBlock(newStatBlock)
             .then(r => {
                 if (!r || listing.Origin === "account") {
                     return;
@@ -50,7 +52,10 @@ export class NPCLibrary {
     }
     
     public SaveEditedStatBlock = (listing: Listing<StatBlock>, newStatBlock: StatBlock) => {
-        this.StatBlocks.remove(listing);
+        const oldStatBlocks = this.StatBlocks().filter(l => l.Id == listing.Id || l.Path + l.Name == listing.Path + listing.Name);
+        for (const statBlock of oldStatBlocks) {
+            this.DeleteListing(statBlock.Id);
+        }
         this.saveStatBlock(listing, newStatBlock);
     }
 

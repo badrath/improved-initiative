@@ -1,5 +1,9 @@
-import _ = require("lodash");
-import React = require("react");
+import * as ko from "knockout";
+import { max, sortBy } from "lodash";
+import * as React from "react";
+
+import { SavedCombatant, SavedEncounter } from "../../common/SavedEncounter";
+import { StatBlock } from "../../common/StatBlock";
 import { probablyUniqueString } from "../../common/Toolbox";
 import { AccountClient } from "../Account/AccountClient";
 import { Combatant } from "../Combatant/Combatant";
@@ -13,22 +17,19 @@ import { env } from "../Environment";
 import { PlayerViewClient } from "../Player/PlayerViewClient";
 import { IRules } from "../Rules/Rules";
 import { CurrentSettings } from "../Settings/Settings";
-import { StatBlock } from "../StatBlock/StatBlock";
-import { StatBlockTextEnricher } from "../StatBlock/StatBlockTextEnricher";
+import { TextEnricher } from "../TextEnricher/TextEnricher";
 import { Store } from "../Utility/Store";
 import { DifficultyCalculator, EncounterDifficulty } from "../Widgets/DifficultyCalculator";
 import { TurnTimer } from "../Widgets/TurnTimer";
-import { SavedCombatant, SavedEncounter } from "./SavedEncounter";
 
 export class Encounter {
-    private playerViewClient: PlayerViewClient;
     constructor(
         promptQueue: PromptQueue,
-        private Socket: SocketIOClient.Socket,
+        private playerViewClient: PlayerViewClient,
         private buildCombatantViewModel: (c: Combatant) => CombatantViewModel,
         private handleRemoveCombatantViewModels: (vm: CombatantViewModel[]) => void,
         public Rules: IRules,
-        private statBlockTextEnricher: StatBlockTextEnricher
+        private statBlockTextEnricher: TextEnricher
     ) {
         this.CombatantCountsByName = ko.observable({});
         this.ActiveCombatant = ko.observable<Combatant>();
@@ -60,8 +61,6 @@ export class Encounter {
         if (autosavedEncounter) {
             this.LoadSavedEncounter(autosavedEncounter, true);
         }
-
-        this.playerViewClient = new PlayerViewClient(this.Socket);
     }
 
     public TurnTimer = new TurnTimer();
@@ -87,7 +86,7 @@ export class Encounter {
             .filter(c => c.InitiativeGroup() == combatant.InitiativeGroup())
             .map(c => c.InitiativeBonus);
         
-        return _.max(groupBonuses) || combatant.InitiativeBonus;
+        return max(groupBonuses) || combatant.InitiativeBonus;
     }
 
     private getCombatantSortIteratees(stable: boolean): ((c: Combatant) => number | string )[] {
@@ -106,9 +105,24 @@ export class Encounter {
     }
 
     public SortByInitiative = (stable = false) => {
-        const sortedCombatants = _.sortBy(this.Combatants(), this.getCombatantSortIteratees(stable));
+        const sortedCombatants = sortBy(this.Combatants(), this.getCombatantSortIteratees(stable));
         this.Combatants(sortedCombatants);
+
+        if (this.State() === "active") {
+            if (CurrentSettings().PlayerView.ActiveCombatantOnTop) {
+                this.ActiveCombatantToTop();
+            }
+        }
+
         this.QueueEmitEncounter();
+    }
+
+    public ActiveCombatantToTop = () => {
+            const activeCombatant = this.ActiveCombatant();
+
+            while (this.Combatants()[0] != activeCombatant) {
+                this.Combatants().push(this.Combatants().shift());
+            }
     }
 
     public ImportEncounter = (encounter) => {
@@ -228,28 +242,55 @@ export class Encounter {
     public NextTurn = () => {
         const activeCombatant = this.ActiveCombatant();
 
+        this.durationTags
+            .filter(t => t.HasDuration && t.DurationCombatantId == activeCombatant.Id && t.DurationTiming == "EndOfTurn")
+            .forEach(t => t.Decrement());
+        
         let nextIndex = this.Combatants().indexOf(activeCombatant) + 1;
         if (nextIndex >= this.Combatants().length) {
             nextIndex = 0;
             this.RoundCounter(this.RoundCounter() + 1);
-            this.durationTags.forEach(t => t.Decrement());
         }
 
         const nextCombatant = this.Combatants()[nextIndex];
 
         this.ActiveCombatant(nextCombatant);
+
+        if (CurrentSettings().PlayerView.ActiveCombatantOnTop) {
+            this.ActiveCombatantToTop();
+        }
+
+        this.durationTags
+            .filter(t => t.HasDuration && t.DurationCombatantId == nextCombatant.Id && t.DurationTiming == "StartOfTurn")
+            .forEach(t => t.Decrement());
+
         this.TurnTimer.Reset();
         this.QueueEmitEncounter();
     }
 
     public PreviousTurn = () => {
-        let previousIndex = this.Combatants().indexOf(this.ActiveCombatant()) - 1;
+        const activeCombatant = this.ActiveCombatant();
+        this.durationTags
+            .filter(t => t.HasDuration && t.DurationCombatantId == activeCombatant.Id && t.DurationTiming == "StartOfTurn")
+            .forEach(t => t.Increment());
+
+        let previousIndex = this.Combatants().indexOf(activeCombatant) - 1;
         if (previousIndex < 0) {
             previousIndex = this.Combatants().length - 1;
             this.RoundCounter(this.RoundCounter() - 1);
-            this.durationTags.forEach(t => t.Increment());
         }
-        this.ActiveCombatant(this.Combatants()[previousIndex]);
+
+        const previousCombatant = this.Combatants()[previousIndex];
+        this.ActiveCombatant(previousCombatant);
+
+        if (CurrentSettings().PlayerView.ActiveCombatantOnTop) {
+            this.ActiveCombatantToTop();
+        }
+
+        this.durationTags
+            .filter(t => t.HasDuration && t.DurationCombatantId == previousCombatant.Id && t.DurationTiming == "EndOfTurn")
+            .forEach(t => t.Increment());
+
         this.QueueEmitEncounter();
     }
 
@@ -272,7 +313,7 @@ export class Encounter {
                 return {
                     Id: c.Id,
                     StatBlock: c.StatBlock(),
-                    MaxHP: c.MaxHP,
+                    MaxHP: c.MaxHP(),
                     CurrentHP: c.CurrentHP(),
                     TemporaryHP: c.TemporaryHP(),
                     Initiative: c.Initiative(),

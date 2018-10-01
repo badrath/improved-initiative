@@ -29,43 +29,51 @@ export function ToStaticViewModel(combatant: Combatant): StaticCombatantViewMode
 }
 
 function GetHPDisplay(combatant: Combatant): string {
-    let monsterHpVerbosity = CurrentSettings().PlayerView.MonsterHPVerbosity;
+    const hpVerbosity = combatant.IsPlayerCharacter ?
+        CurrentSettings().PlayerView.PlayerHPVerbosity :
+        CurrentSettings().PlayerView.MonsterHPVerbosity;
+    
+    const maxHP = combatant.MaxHP(),
+        currentHP = combatant.CurrentHP(),
+        temporaryHP = combatant.TemporaryHP();
 
-    if (combatant.IsPlayerCharacter || monsterHpVerbosity == "Actual HP") {
-        if (combatant.TemporaryHP()) {
-            return `${combatant.CurrentHP()}+${combatant.TemporaryHP()}/${combatant.MaxHP}`;
+    if (hpVerbosity == "Actual HP") {
+        if (temporaryHP) {
+            return `${currentHP}+${temporaryHP}/${maxHP}`;
         } else {
-            return `${combatant.CurrentHP()}/${combatant.MaxHP}`;
+            return `${currentHP}/${maxHP}`;
         }
     }
 
-    if (monsterHpVerbosity == "Hide All") {
+    if (hpVerbosity == "Hide All") {
         return "";
     }
 
-    if (monsterHpVerbosity == "Damage Taken") {
-        return (combatant.CurrentHP() - combatant.MaxHP).toString();
+    if (hpVerbosity == "Damage Taken") {
+        return (currentHP - maxHP).toString();
     }
 
-    if (combatant.CurrentHP() <= 0) {
+    if (currentHP <= 0) {
         return "<span class='defeatedHP'>Defeated</span>";
-    } else if (combatant.CurrentHP() < combatant.MaxHP / 2) {
+    } else if (currentHP < maxHP / 2) {
         return "<span class='bloodiedHP'>Bloodied</span>";
-    } else if (combatant.CurrentHP() < combatant.MaxHP) {
+    } else if (currentHP < maxHP) {
         return "<span class='hurtHP'>Hurt</span>";
     }
     return "<span class='healthyHP'>Healthy</span>";
 }
 
 function GetHPColor(combatant: Combatant) {
-    let monsterHpVerbosity = CurrentSettings().PlayerView.MonsterHPVerbosity;
-    if (!combatant.IsPlayerCharacter &&
-        (monsterHpVerbosity == "Monochrome Label" ||
-            monsterHpVerbosity == "Hide All" ||
-            monsterHpVerbosity == "Damage Taken")) {
+    const maxHP = combatant.MaxHP(), currentHP = combatant.CurrentHP();
+    const hpVerbosity = combatant.IsPlayerCharacter ?
+        CurrentSettings().PlayerView.PlayerHPVerbosity :
+        CurrentSettings().PlayerView.MonsterHPVerbosity;
+    if (hpVerbosity == "Monochrome Label" ||
+        hpVerbosity == "Hide All" ||
+        hpVerbosity == "Damage Taken") {
         return "auto";
     }
-    let green = Math.floor((combatant.CurrentHP() / combatant.MaxHP) * 170);
-    let red = Math.floor((combatant.MaxHP - combatant.CurrentHP()) / combatant.MaxHP * 170);
+    let green = Math.floor((currentHP / maxHP) * 170);
+    let red = Math.floor((maxHP - currentHP) / maxHP * 170);
     return "rgb(" + red + "," + green + ",0)";
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { StatBlock } from "../../StatBlock/StatBlock";
+import { StatBlock } from "../../../common/StatBlock";
 import { Metrics } from "../../Utility/Metrics";
 import { Prompt } from "./Prompt";
 
@@ -21,7 +21,7 @@ class QuickAddPrompt extends React.Component<QuickAddPromptProps, QuickAddPrompt
             <input className={inputClassName} name="hp" type="number" placeholder="HP" />
             <input className={inputClassName} name="ac" type="number" placeholder="AC" />
             <input className={inputClassName} name="initiative" type="number" placeholder="Init" />
-            <button type="submit" className="fa fa-check button"></button>
+            <button type="submit" className="fas fa-check button"></button>
         </div>;
     }
 }
@@ -50,5 +50,5 @@ export class QuickAddPromptWrapper implements Prompt {
         Metrics.TrackEvent("CombatantQuickAdded", { Name: name });
     }
 
-    private component = <QuickAddPrompt />;
+    public component = <QuickAddPrompt />;
 }

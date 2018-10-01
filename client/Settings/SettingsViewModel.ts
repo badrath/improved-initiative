@@ -1,5 +1,7 @@
+import * as ko from "knockout";
 import * as React from "react";
-import { PlayerViewCustomStyles, PlayerViewSettings } from "../../common/PlayerViewSettings";
+
+import { HpVerbosityOption, HpVerbosityOptions, PlayerViewSettings } from "../../common/PlayerViewSettings";
 import { AccountClient } from "../Account/AccountClient";
 import { CombatantCommander } from "../Commands/CombatantCommander";
 import { Command } from "../Commands/Command";
@@ -7,7 +9,7 @@ import { CommandSetting } from "../Commands/CommandSetting";
 import { Libraries } from "../Library/Libraries";
 import { AccountViewModel } from "../Settings/AccountViewModel";
 import { Store } from "../Utility/Store";
-import { hpVerbosityOptions, AutoGroupInitiativeOption, AutoGroupInitiativeOptions, CurrentSettings, Settings } from "./Settings";
+import { AutoGroupInitiativeOption, AutoGroupInitiativeOptions, CurrentSettings, Settings } from "./Settings";
 import { EpicInitiativeSettings, EpicInitiativeSettingsProps } from "./components/EpicInitiativeSettings";
 
 const tips = [
@@ -34,6 +36,7 @@ export class SettingsViewModel {
     public Tip: KnockoutComputed<string>;
 
     public PlayerViewAllowPlayerSuggestions: KnockoutObservable<boolean>;
+    public ActiveCombatantOnTop: KnockoutObservable<boolean>;
     public PlayerViewDisplayTurnTimer: KnockoutObservable<boolean>;
     public PlayerViewDisplayRoundCounter: KnockoutObservable<boolean>;
     public DisplayDifficulty: KnockoutObservable<boolean>;
@@ -44,14 +47,15 @@ export class SettingsViewModel {
     public AutoGroupInitiative: KnockoutObservable<AutoGroupInitiativeOption>;
     public AllowNegativeHP: KnockoutObservable<boolean>;
     public HideMonstersOutsideEncounter: KnockoutObservable<boolean>;
-    public HpVerbosityOptions: string[];
-    public HpVerbosity: KnockoutObservable<string>;
+    public HpVerbosityOptions: HpVerbosityOption[];
+    public MonsterHpVerbosity: KnockoutObservable<HpVerbosityOption>;
+    public PlayerHpVerbosity: KnockoutObservable<HpVerbosityOption>;
     public CombatantCommands: Command[];
     public CurrentTab = ko.observable<string>("about");
     public RollHp: KnockoutObservable<boolean>;
     public AccountViewModel = new AccountViewModel(this.libraries);
 
-    private epicInitiativeSettings: React.ComponentElement<any, EpicInitiativeSettings>;
+    public epicInitiativeSettings: React.ComponentElement<any, EpicInitiativeSettings>;
     private playerViewSettings: PlayerViewSettings;
     
     public ExportData = () => {
@@ -77,7 +81,7 @@ export class SettingsViewModel {
 
     private getUpdatedSettings(): Settings {
         const getCommandSetting = (command: Command): CommandSetting => ({
-            Name: command.Description,
+            Name: command.Id,
             KeyBinding: command.KeyBinding,
             ShowOnActionBar: command.ShowOnActionBar()
         });
@@ -98,10 +102,12 @@ export class SettingsViewModel {
             PlayerView: {
                 ...this.playerViewSettings,
                 AllowPlayerSuggestions: this.PlayerViewAllowPlayerSuggestions(),
+                ActiveCombatantOnTop: this.ActiveCombatantOnTop(),
                 DisplayRoundCounter: this.PlayerViewDisplayRoundCounter(),
                 DisplayTurnTimer: this.PlayerViewDisplayTurnTimer(),
                 HideMonstersOutsideEncounter: this.HideMonstersOutsideEncounter(),
-                MonsterHPVerbosity: this.HpVerbosity(),
+                MonsterHPVerbosity: this.MonsterHpVerbosity(),
+                PlayerHPVerbosity: this.PlayerHpVerbosity(),
             },
             Version: process.env.VERSION
         };
@@ -117,10 +123,11 @@ export class SettingsViewModel {
 
     constructor(
         private encounterCommands: Command [],
-        private combatantCommander: CombatantCommander,
+        combatantCommander: CombatantCommander,
         private libraries: Libraries,
         private settingsVisible: KnockoutObservable<boolean>,
         protected repeatTutorial: () => void,
+        protected reviewPrivacyPolicy: () => void,
     ) {
         const currentTipIndex = ko.observable(Math.floor(Math.random() * tips.length));
 
@@ -148,12 +155,14 @@ export class SettingsViewModel {
         this.DisplayTurnTimer = ko.observable(currentSettings.TrackerView.DisplayTurnTimer);
         this.DisplayDifficulty = ko.observable(currentSettings.TrackerView.DisplayDifficulty);
 
-        this.HpVerbosity = ko.observable(currentSettings.PlayerView.MonsterHPVerbosity);
-        this.HpVerbosityOptions = hpVerbosityOptions;
+        this.MonsterHpVerbosity = ko.observable(currentSettings.PlayerView.MonsterHPVerbosity);
+        this.PlayerHpVerbosity = ko.observable(currentSettings.PlayerView.PlayerHPVerbosity);
+        this.HpVerbosityOptions = HpVerbosityOptions;
         this.HideMonstersOutsideEncounter = ko.observable(currentSettings.PlayerView.HideMonstersOutsideEncounter);
         this.PlayerViewDisplayRoundCounter = ko.observable(currentSettings.PlayerView.DisplayRoundCounter);
         this.PlayerViewDisplayTurnTimer = ko.observable(currentSettings.PlayerView.DisplayTurnTimer);
         this.PlayerViewAllowPlayerSuggestions = ko.observable(currentSettings.PlayerView.AllowPlayerSuggestions);
+        this.ActiveCombatantOnTop = ko.observable(currentSettings.PlayerView.ActiveCombatantOnTop);
 
         this.Tip = ko.pureComputed(() => tips[currentTipIndex() % tips.length]);
         this.NextTip = cycleTipIndex.bind(1);

@@ -1,4 +1,6 @@
-import React = require("react");
+import * as ko from "knockout";
+import * as React from "react";
+
 import { probablyUniqueString } from "../../common/Toolbox";
 import { Combatant } from "../Combatant/Combatant";
 import { CombatantViewModel } from "../Combatant/CombatantViewModel";
@@ -8,10 +10,12 @@ import { CurrentSettings } from "../Settings/Settings";
 import { TrackerViewModel } from "../TrackerViewModel";
 import { Metrics } from "../Utility/Metrics";
 import { Store } from "../Utility/Store";
-import { BuildCombatantCommandList, Command } from "./Command";
+import { BuildCombatantCommandList } from "./BuildCombatantCommandList";
+import { Command } from "./Command";
 import { AcceptDamagePrompt } from "./Prompts/AcceptDamagePrompt";
 import { ConcentrationPrompt } from "./Prompts/ConcentrationPrompt";
 import { DefaultPrompt } from "./Prompts/Prompt";
+import { TagPromptWrapper } from "./Prompts/TagPrompt";
 
 interface PendingLinkInitiative {
     combatant: CombatantViewModel;
@@ -21,17 +25,6 @@ interface PendingLinkInitiative {
 export class CombatantCommander {
     constructor(private tracker: TrackerViewModel) {
         this.Commands = BuildCombatantCommandList(this);
-
-        this.Commands.forEach(c => {
-            let keyBinding = Store.Load<string>(Store.KeyBindings, c.Description);
-            if (keyBinding) {
-                c.KeyBinding = keyBinding;
-            }
-            let showOnActionBar = Store.Load<boolean>(Store.ActionBar, c.Description);
-            if (showOnActionBar != null) {
-                c.ShowOnActionBar(showOnActionBar);
-            }
-        });
     }
 
     public Commands: Command[];
@@ -102,7 +95,7 @@ export class CombatantCommander {
         }
 
         this.tracker.Encounter.RemoveCombatantsByViewModel(combatantsToRemove);
-        
+
         const remainingCombatants = this.tracker.CombatantViewModels();
 
         let allMyFriendsAreGone = name => remainingCombatants.every(c => c.Combatant.StatBlock().Name != name);
@@ -207,7 +200,9 @@ export class CombatantCommander {
         if (combatantVM instanceof CombatantViewModel) {
             this.Select(combatantVM);
         }
-        this.SelectedCombatants().forEach(c => c.AddTag(this.tracker.Encounter));
+        const selectedCombatants = this.SelectedCombatants().map(c => c.Combatant);
+        const prompt = new TagPromptWrapper(this.tracker.Encounter, selectedCombatants, this.tracker.EventLog.AddEvent);
+        this.tracker.PromptQueue.Add(prompt);
         return false;
     }
 
@@ -265,21 +260,24 @@ export class CombatantCommander {
         }
     }
 
-    public EditName = () => {
-        this.SelectedCombatants().forEach(c => c.EditName());
+    public SetAlias = () => {
+        this.SelectedCombatants().forEach(c => c.SetAlias());
         return false;
     }
 
     public EditStatBlock = () => {
         if (this.SelectedCombatants().length == 1) {
             let selectedCombatant = this.SelectedCombatants()[0].Combatant;
-            this.tracker.StatBlockEditor.EditStatBlock(null, selectedCombatant.StatBlock(), (newStatBlock) => {
-                selectedCombatant.StatBlock(newStatBlock);
-                this.tracker.Encounter.QueueEmitEncounter();
-            }, () => {
-                this.Remove();
-            },
-                "instance");
+            this.tracker.EditStatBlock(
+                "combatant",
+                selectedCombatant.StatBlock(),
+                (newStatBlock) => {
+                    selectedCombatant.StatBlock(newStatBlock);
+                    this.tracker.Encounter.QueueEmitEncounter();
+                },
+                undefined,
+                () => this.Remove()
+            );
         }
     }
 

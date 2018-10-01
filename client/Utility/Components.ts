@@ -1,4 +1,6 @@
+import * as ko from "knockout";
 import * as _ from "lodash";
+
 import { SettingsViewModel } from "../Settings/SettingsViewModel";
 import { TutorialViewModel } from "../Tutorial/TutorialViewModel";
 
@@ -38,11 +40,10 @@ export let RegisterComponents = () => {
         }
     );
 
-    registerComponent("settings", params => new SettingsViewModel(params.encounterCommands, params.combatantCommander, params.libraries, params.settingsVisible, params.repeatTutorial));
+    registerComponent("settings", params => new SettingsViewModel(params.encounterCommands, params.combatantCommander, params.libraries, params.settingsVisible, params.repeatTutorial, params.reviewPrivacyPolicy));
     registerComponent("combatant", params => params.viewModel);
     registerComponent("playerdisplaycombatant", params => params.combatant);
     registerComponent("defaultprompt", params => params.prompt);
-    registerComponent("tagprompt", params => params.prompt);
     registerComponent("concentrationprompt", params => params.prompt);
     registerComponent("initiativeprompt", params => params.prompt);
     registerComponent("spellprompt", params => params.prompt);

@@ -1,7 +1,7 @@
 import Awesomplete = require("awesomplete");
-import React = require("react");
+import * as React from "react";
+import { SavedCombatant, SavedEncounter } from "../../../common/SavedEncounter";
 import { AccountClient } from "../../Account/AccountClient";
-import { SavedCombatant, SavedEncounter } from "../../Encounter/SavedEncounter";
 import { UpdateLegacySavedEncounter } from "../../Encounter/UpdateLegacySavedEncounter";
 import { Metrics } from "../../Utility/Metrics";
 import { Prompt } from "./Prompt";
@@ -31,7 +31,7 @@ export class MoveEncounterPrompt extends React.Component<MoveEncounterPromptProp
         return <span className={promptClassName}>
             Move encounter {this.props.encounterName} to Folder:
             <input ref={i => this.input = i} className={inputClassName} name="folderName" type="text" />
-            <button type="submit" className="fa fa-check button"></button>
+            <button type="submit" className="fas fa-check button"></button>
         </span>;
     }
 
@@ -68,6 +68,6 @@ export class MoveEncounterPromptWrapper implements Prompt {
         Metrics.TrackEvent("EncounterMoved", { Path: folderName });
     }
 
-    private component: JSX.Element;
+    public component: JSX.Element;
 }
 

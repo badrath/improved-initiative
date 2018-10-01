@@ -1,11 +1,18 @@
-import { StatBlock } from "../StatBlock/StatBlock";
+import { StatBlock } from "../../common/StatBlock";
+import { AccountClient } from "../Account/AccountClient";
 import { Importer } from "./Importer";
+import * as _ from "lodash";
 
 export class StatBlockImporter extends Importer {
     public getType() {
-        return this.getString("size") + " " +
-            this.getString("type") + ", " +
+        let sizeString = StatBlockImporter.Sizes[this.getString("size")];
+        return sizeString + " " +
+            this.getCommaSeparatedStrings("type")[0] + ", " +
             this.getString("alignment");
+    }
+
+    public getSource()  {
+        return _.startCase(this.getCommaSeparatedStrings("type")[1]);
     }
 
     public getAbilities() {
@@ -23,7 +30,9 @@ export class StatBlockImporter extends Importer {
         let statBlock = StatBlock.Default();
 
         statBlock.Name = this.getString("name");
+        statBlock.Id = AccountClient.MakeId(statBlock.Name);
         statBlock.Type = this.getType();
+        statBlock.Source = this.getSource();
         statBlock.Abilities = this.getAbilities();
 
         statBlock.HP = this.getValueAndNotes("hp");
@@ -47,5 +56,14 @@ export class StatBlockImporter extends Importer {
         statBlock.LegendaryActions = this.getPowers("legendary");
 
         return statBlock;
+    }
+
+    private static readonly Sizes = {
+        "T": "Tiny",
+        "S": "Small",
+        "M": "Medium",
+        "L": "Large",
+        "H": "Huge",
+        "G": "Gargantuan"
     }
 }

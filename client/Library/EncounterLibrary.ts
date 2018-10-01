@@ -1,6 +1,8 @@
+import * as ko from "knockout";
+
 import { ServerListing } from "../../common/Listable";
+import { SavedCombatant, SavedEncounter } from "../../common/SavedEncounter";
 import { AccountClient } from "../Account/AccountClient";
-import { SavedCombatant, SavedEncounter } from "../Encounter/SavedEncounter";
 import { UpdateLegacySavedEncounter } from "../Encounter/UpdateLegacySavedEncounter";
 import { Store } from "../Utility/Store";
 import { Listing, ListingOrigin } from "./Listing";
@@ -8,7 +10,7 @@ import { Listing, ListingOrigin } from "./Listing";
 export class EncounterLibrary {
     public Encounters = ko.observableArray<Listing<SavedEncounter<SavedCombatant>>>([]);
 
-    constructor() {
+    constructor(private accountClient: AccountClient) {
         const listings = Store.LoadAllAndUpdateIds(Store.SavedEncounters)
             .map(e => {
                 const encounter = UpdateLegacySavedEncounter(e);
@@ -54,7 +56,7 @@ export class EncounterLibrary {
 
         Store.Save(Store.SavedEncounters, savedEncounter.Id, savedEncounter);
 
-        new AccountClient().SaveEncounter(savedEncounter)
+        this.accountClient.SaveEncounter(savedEncounter)
             .then(r => {
                 if (!r) {
                     return;
@@ -71,7 +73,7 @@ export class EncounterLibrary {
 
     private deleteById = (listingId: string) => {
         this.Encounters.remove(l => l.Id == listingId);
-        new AccountClient().DeleteEncounter(listingId);
+        this.accountClient.DeleteEncounter(listingId);
         Store.Delete(Store.SavedEncounters, listingId);
     }
 }

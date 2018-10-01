@@ -1,0 +1,76 @@
+@button-inner: 18px;
+@button-padding: 10px;
+
+.fas {
+    .fas();
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: normal;
+    &:before {
+        font-family: 'Font Awesome 5 Free';
+    }
+}
+
+.fa-text {
+    .fas();
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: bold;
+    &:before {
+        font-family: 'Font Awesome 5 Free';
+        margin-right: @medium-spacer;
+    }
+}
+
+.fa-clickable {
+    cursor: pointer;
+	.fas();
+}
+
+.fa-clickable:hover {
+    color: @hover-white;
+}
+
+.small-button {
+    .fa-clickable();
+    padding: @medium-spacer;
+    border-radius: @border-radius;
+    border: 1px solid @primary-white;
+}
+
+.button() {
+    .colors(@button-text, @button-face, @shadow);
+    &:hover {
+        background-color: @hover-white;
+    }
+    cursor: pointer;
+    display: inline-block;
+    margin: @small-spacer;
+    padding: @button-padding;
+    text-align: center;
+    text-decoration: none;
+	border-radius: @border-radius;
+    border: 0;
+}
+
+.button, .c-button {
+    .button();
+}
+
+button.button {
+    height: 38px;
+}
+
+.button--close {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.c-button--disabled {
+    cursor: unset;
+}
+
+.rollable, .spell-reference, .condition-reference {
+    cursor: pointer;
+    border-bottom: 1px dashed;
+    margin-bottom: -1px;
+}

@@ -1,4 +1,7 @@
-import { Spell } from "../Spell/Spell";
+import * as ko from "knockout";
+import * as koMapping from "knockout-mapping";
+
+import { Spell } from "../../common/Spell";
 
 export class SpellEditor {
     private saveCallback: (newSpell: Spell) => void;
@@ -31,7 +34,7 @@ export class SpellEditor {
 
 
     private makeEditable = (spell: Spell) => {
-        let observableSpell = ko["mapping"].fromJS(this.spell);
+        let observableSpell = koMapping.fromJS(this.spell);
         return observableSpell;
     }
 

@@ -1,14 +1,16 @@
-import React = require("react");
+import * as ko from "knockout";
+import * as React from "react";
+
+import { Spell } from "../../../common/Spell";
 import { Listing } from "../../Library/Listing";
-import { Spell } from "../../Spell/Spell";
-import { StatBlockTextEnricher } from "../../StatBlock/StatBlockTextEnricher";
+import { TextEnricher } from "../../TextEnricher/TextEnricher";
 import { Prompt } from "./Prompt";
 
 const numberSuffixes = ["0th", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
 
 interface SpellPromptProps {
     Spell: Spell;
-    TextEnricher: StatBlockTextEnricher;
+    TextEnricher: TextEnricher;
 }
  
 class SpellPrompt extends React.Component<SpellPromptProps, null> {
@@ -38,7 +40,7 @@ class SpellPrompt extends React.Component<SpellPromptProps, null> {
                 <p>{this.props.TextEnricher.EnrichText(this.props.Spell.Description)}</p>
                 <p className="spell-source">Source: {this.props.Spell.Source}</p>
             </div>
-            <button type="submit" className="fa fa-check button"></button>
+            <button type="submit" className="fas fa-check button"></button>
         </React.Fragment>;
     }
 }
@@ -49,8 +51,9 @@ export class SpellPromptWrapper implements Prompt {
 
     protected component = ko.observable();
 
-    constructor(listing: Listing<Spell>, private textEnricher: StatBlockTextEnricher) {
-        listing.GetAsyncWithUpdatedId(spell => {
+    constructor(listing: Listing<Spell>, private textEnricher: TextEnricher) {
+        listing.GetAsyncWithUpdatedId(unsafeSpell => {
+            const spell = { ...Spell.Default(), ...unsafeSpell };
             this.component(<SpellPrompt Spell={spell} TextEnricher={this.textEnricher} />);
         });
     }

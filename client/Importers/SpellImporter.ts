@@ -1,4 +1,5 @@
-import { Spell } from "../Spell/Spell";
+import { Spell } from "../../common/Spell";
+import { AccountClient } from "../Account/AccountClient";
 import { Importer } from "./Importer";
 
 export class SpellImporter extends Importer {
@@ -16,6 +17,7 @@ export class SpellImporter extends Importer {
     public GetSpell = () => {
         const spell = Spell.Default();
         spell.Name = this.getString("name");
+        spell.Id = AccountClient.MakeId(spell.Name);
         spell.Level = this.getInt("level");
         const initial = this.getString("school");
         spell.School = SpellImporter.schoolsByInitials[initial];
